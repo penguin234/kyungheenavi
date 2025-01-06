@@ -2,10 +2,407 @@
 
 <head>
     <title> 경희대 네비게이션 </title>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <script>
+        function click(e) {
+            console.log('x', e.offsetX);
+            console.log('y', e.offsetY);
+        }
+    </script>
+
+    <script>
+        spots_raw = [
+            [1, '정문'],
+            [4, '우정원'],
+            [3, '공대'],
+            [10, '체대'],
+            [33, '멀관'],
+            [34, '여긱'],
+            [12, '남긱'],
+            [8, '외대'],
+            [15, '도예관'],
+            [16, '생대'],
+            [19, '경영대'],
+            [22, '학관'],
+            [21, '도서관'],
+            [30, '국제학관'],
+            [31, '자대'],
+            [26, '예대'],
+        ]
+
+        // idx, x, y
+        spot_pos = [
+            [0, -1, -1],
+            [1, 167, 23],
+            [2, 168, 51],
+            [3, 245, 50],
+            [4, 136, 102],
+            [5, 172, 102],
+            [6, 174, 154],
+            [7, 250, 150],
+            [8, 180, 202],
+            [9, 204, 218],
+            [10, 238, 210],
+            [11, 94, 257],
+            [12, 121, 336],
+            [13, 212, 267],
+            [14, 242, 258],
+            [15, 286, 277],
+            [16, 288, 306],
+            [17, 287, 333],
+            [18, 286, 350],
+            [19, 292, 382],
+            [20, 351, 354],
+            [21, 255, 422],
+            [22, 270, 400],
+            [23, 288, 422],
+            [24, 367, 425],
+            [25, 433, 428],
+            [26, 476, 429],
+            [27, 246, 489],
+            [28, 364, 500],
+            [29, 554, 507],
+            [30, 332, 546],
+            [31, 401, 521],
+            [32, 456, 523],
+            [33, 92, 222],
+            [34, 98, 275],
+            [35, 97, 296],
+        ]
+
+        const True = true
+        const False = false;
+
+        function Opoint(isk, isg) {
+            return {
+                isk: isk,
+                isg: isg
+            }
+        }
+        opoints = [
+            Opoint(False, False),
+            Opoint(True, True),
+            Opoint(False, False),
+            Opoint(True, True),
+            Opoint(True, True),
+            Opoint(False, False),
+            Opoint(False, False),
+            Opoint(False, False),
+            Opoint(False, False),
+            Opoint(False, False),
+            Opoint(False, True),
+            Opoint(True, True),
+            Opoint(False, False),
+            Opoint(False, False),
+            Opoint(False, False),
+            Opoint(False, False),
+            Opoint(False, True),
+            Opoint(False, True),
+            Opoint(True, True),
+            Opoint(False, False),
+            Opoint(False, False),
+            Opoint(False, False),
+            Opoint(True, True),
+            Opoint(False, False),
+            Opoint(False, False),
+            Opoint(True, True),
+            Opoint(False, False),
+            Opoint(False, True),
+            Opoint(False, False),
+            Opoint(False, True),
+            Opoint(False, False),
+            Opoint(False, False),
+            Opoint(True, True),
+            Opoint(False, False),
+            Opoint(False, False),
+            Opoint(True, True),
+        ]
+
+        function Edge(sp, ep, dist, ishill = false) {
+            return {
+                sp: sp,
+                ep: ep,
+                dist: dist,
+                ishill: ishill
+            }
+        }
+        edges = [
+            Edge(1, 2, 43),
+            Edge(2, 3, 130),
+            Edge(2, 5, 86),
+            Edge(5, 6, 86),
+            Edge(4, 5, 67, True),
+            Edge(3, 7, 178),
+            Edge(6, 7, 128),
+            Edge(6, 8, 87),
+            Edge(8, 33, 167),
+            Edge(33, 11, 40),
+            Edge(11, 34, 40),
+            Edge(34, 35, 52),
+            Edge(35, 12, 54, True),
+            Edge(8, 9, 52),
+            Edge(9, 10, 61),
+            Edge(9, 13, 96),
+            Edge(10, 14, 88),
+            Edge(13, 14, 62),
+            Edge(13, 15, 139, True),
+            Edge(15, 16, 50),
+            Edge(16, 18, 70),
+            Edge(19, 18, 62, True),
+            Edge(18, 20, 103),
+            Edge(24, 20, 125, True),
+            Edge(21, 27, 129),
+            Edge(21, 23, 49),
+            Edge(23, 22, 46, True),
+            Edge(23, 24, 130),
+            Edge(24, 25, 140),
+            Edge(25, 26, 64),
+            Edge(24, 28, 122),
+            Edge(28, 29, 264),
+            Edge(28, 30, 117),
+            Edge(28, 31, 138, True),
+            Edge(31, 32, 58),
+        ]
+
+        params = {
+            kmspeed: 5.5, // 카카오 최대 속도
+            khspeed: 2, // 카카오 언덕 속도
+            kprep: 8, // 카카오 타는 시간
+            kleave: 8, // 카카오 내리는 시간
+
+            zmspeed: 7, // 지쿠 최대 속도
+            zhspeed: 3.5, // 지쿠 언덕 속도
+            zprep: 10, // 지쿠 타는 시간
+            zleave: 8, // 지쿠 내리는 시간
+
+            wspeed: 1.25, // 걷는 속도
+        }
+        function floyd(params) {
+            const { kmspeed, khspeed, kprep, kleave, zmspeed, zhspeed, zprep, zleave, wspeed } = params
+
+            const inf = 1e20
+
+            const n = 121
+            let dists = Array.from(Array(n), () => Array(n).fill(inf))
+            let btimes = Array.from(Array(n), () => Array(n).fill(0))
+
+            for (let i = 1; i < opoints.length; i++) {
+                if (opoints[i].isk) {
+                    dists[i][i + 40] = kprep
+                    dists[i + 40][i] = kleave
+                }
+                if (opoints[i].isg) {
+                    dists[i][i + 40] = zprep
+                    dists[i + 40][i] = zleave
+                }
+            }
+
+            for (const edge of edges) {
+                dists[edge.sp][edge.ep] = edge.dist / wspeed
+                dists[edge.ep][edge.sp] = edge.dist / wspeed
+                if (edge.ish) {
+                    // 카카오
+                    dists[edge.sp + 40][edge.ep + 40] = edge.dist / khspeed
+                    btimes[edge.sp + 40][edge.ep + 40] = edge.dist / khspeed
+                    // 지쿠
+                    dists[edge.sp + 80][edge.ep + 80] = edge.dist / zhspeed
+                    btimes[edge.sp + 80][edge.ep + 80] = edge.dist / zhspeed
+                }
+                else {
+                    // 카카오
+                    dists[edge.sp + 40][edge.ep + 40] = edge.dist / kmspeed
+                    btimes[edge.sp + 40][edge.ep + 40] = edge.dist / kmspeed
+                    // 지쿠
+                    dists[edge.sp + 80][edge.ep + 80] = edge.dist / zmspeed
+                    btimes[edge.sp + 80][edge.ep + 80] = edge.dist / zmspeed
+                }
+                // 카카오
+                dists[edge.ep + 40][edge.sp + 40] = edge.dist / kmspeed
+                btimes[edge.sp + 40][edge.ep + 40] = edge.dist / kmspeed
+                // 지쿠
+                dists[edge.ep + 80][edge.sp + 80] = edge.dist / zmspeed
+                btimes[edge.sp + 80][edge.ep + 80] = edge.dist / zmspeed
+            }
+
+            // some walk paths
+            // 언덕 넘는 길
+            dists[12][22] = 220
+            dists[22][12] = 220
+            // 남긱 <=> 체대앞 숏컷
+            dists[12][13] = 213
+            dists[13][12] = 213
+            // 멀관 <=> 우정원 계단
+            dists[4][11] = 185
+            dists[11][4] = 185
+            // 경영대 <=> 학관 계단
+            dists[19][22] = 100 / wspeed
+            dists[22][19] = 100 / wspeed
+
+            let path = Array.from(Array(n), () => Array(n).fill(0))
+            for (let k = 1; k < n; k++) {
+                for (let i = 1; i < n; i++) {
+                    for (let j = 1; j < n; j++) {
+                        let c = dists[i][k] + dists[k][j]
+                        if (c < dists[i][j]) {
+                            path[i][j] = k
+                            dists[i][j] = c
+                            btimes[i][j] = btimes[i][k] + btimes[k][j]
+                        }
+                    }
+                }
+            }
+
+            return [dists, btimes, path]
+        }
+
+        const [dists, btimes, path] = floyd(params)
+
+        function calccost(base, perm, time) {
+            if (time == 0)
+                return 0
+            return base + perm * Math.floor(time / 60)
+        }
+
+        function getpath(a, b) {
+            out = []
+            function getroot(a, b) {
+                if (path[a][b] != 0) {
+                    getroot(a, path[a][b])
+                    out.push(path[a][b])
+                    getroot(path[a][b], b)
+                }
+            }
+            out.push(a)
+            getroot(a, b)
+            out.push(b)
+
+            isk = false
+            isg = false
+            for (const p of out) {
+                if (p >= 80) {
+                    isg = true
+                }
+                else if (p >= 40) {
+                    isk = true
+                }
+            }
+            let cost = 0
+            if (isg) {
+                cost = calccost(600, 150, btimes[a][b])
+            }
+            if (isk) {
+                cost = calccost(300, 150, btimes[a][b])
+            }
+            return {
+                path: out,
+                dist: dists[a][b],
+                cost: cost
+            }
+        }
+    </script>
 </head>
 
 <body>
-    <img src="/background.png">
+    <div id="app">
+        <div>
+            <span> 출발: </span>
+            <select v-model="start_spot">
+                <option disabled value="-1"> 출발지 선택 </option>
+                <option v-for="spot in spots" :value="spot[0]">
+                    {{ spot[1] }}
+                </option>
+            </select>
+            <span> 도착 </span>
+            <select v-model="end_spot">
+                <option disabled value="-1"> 목적지 선택 </option>
+                <option v-for="spot in spots" :value="spot[0]">
+                    {{ spot[1] }}
+                </option>
+            </select>
+
+            <button @click="findpath(event)"> 길찾기 </button>
+        </div>
+
+        <div>
+            <svg width=" 600" height="600" onclick="click(event)">
+                <image x="0" y="0" width="600" height="600" href="/background.png"></image>
+
+                <line v-for="line in out_lines" :x1="line[0][0]" :y1="line[0][1]" :x2="line[1][0]" :y2="line[1][1]"
+                    style="stroke:red;stroke-width:2" />
+
+                <circle v-for="spot in out_spots" :cx="spot.x" :cy="spot.y" r="5" fill="blue" />
+            </svg>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                const spots = ref(spots_raw)
+                const start_spot = ref(-1)
+                const end_spot = ref(-1)
+
+                const out_lines = ref([])
+                const out_spots = ref([])
+
+                findpath = (event) => {
+                    const start = start_spot.value
+                    if (start == -1) {
+                        alert('출발지를 선택하세요')
+                        return
+                    }
+
+                    const end = end_spot.value
+                    if (end == -1) {
+                        alert('목적지를 선택하세요')
+                        return
+                    }
+
+                    if (start == end) {
+                        alert('출발지와 목적지가 같습니다')
+                        return
+                    }
+
+                    let { path, dist, cost } = getpath(start, end)
+                    let out = []
+                    let sp = []
+                    for (let i = 1; i < path.length; i++) {
+                        let a = path[i - 1] % 40
+                        let b = path[i] % 40
+                        if (a == b) {
+                            sp.push({
+                                x: spot_pos[a][1],
+                                y: spot_pos[a][2]
+                            })
+                        }
+                        else {
+                            out.push([
+                                [spot_pos[a][1], spot_pos[a][2]],
+                                [spot_pos[b][1], spot_pos[b][2]]
+                            ])
+                        }
+                    }
+                    out_lines.value = out
+                    out_spots.value = sp
+                }
+
+                return {
+                    spots,
+                    start_spot,
+                    end_spot,
+                    out_lines,
+                    out_spots,
+
+                    findpath,
+                    getpath,
+                }
+            },
+        }).mount('#app')
+    </script>
 </body>
 
 </html>
