@@ -345,7 +345,8 @@
         </div>
 
         <div>
-            <div v-for="path in paths" :style="{ backgroundColor: path.color }" @click=" draw(path)">
+            <div v-for="path in paths" :style="{ backgroundColor: path.color, color: path.fcolor }"
+                @click=" draw(path)">
                 {{ path.name }} 걸리는 시간 : {{ roundup(path.dist) }} 요금 : {{ roundup(path.cost) }}
             </div>
         </div>
@@ -395,9 +396,9 @@
                     }
 
                     let pl = []
-                    pl.push({ ...getgpath(start, end), name: '지쿠', color: 'green' })
-                    pl.push({ ...getkpath(start, end), name: '카카오', color: 'yellow' })
-                    pl.push({ ...getwpath(start, end), name: '걷기', color: 'grey' })
+                    pl.push({ ...getgpath(start, end), name: '지쿠', color: 'green', fcolor: 'white' })
+                    pl.push({ ...getkpath(start, end), name: '카카오', color: 'yellow', fcolor: 'black' })
+                    pl.push({ ...getwpath(start, end), name: '걷기', color: 'grey', fcolor: 'white' })
                     paths.value = pl
                 }
 
