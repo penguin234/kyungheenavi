@@ -178,9 +178,12 @@
             zleave: 8, // 지쿠 내리는 시간
 
             wspeed: 1.25, // 걷는 속도
+
+            isk: true,
+            isg: true,
         }
         function floyd(params) {
-            const { kmspeed, khspeed, kprep, kleave, zmspeed, zhspeed, zprep, zleave, wspeed } = params
+            const { kmspeed, khspeed, kprep, kleave, zmspeed, zhspeed, zprep, zleave, wspeed, isk, isg } = params
 
             const inf = 1e20
 
@@ -189,13 +192,13 @@
             let btimes = Array.from(Array(n), () => Array(n).fill(0))
 
             for (let i = 1; i < opoints.length; i++) {
-                if (opoints[i].isk) {
+                if (opoints[i].isk && isk) {
                     dists[i][i + 40] = kprep
                     dists[i + 40][i] = kleave
                 }
-                if (opoints[i].isg) {
-                    dists[i][i + 40] = zprep
-                    dists[i + 40][i] = zleave
+                if (opoints[i].isg && isg) {
+                    dists[i][i + 80] = zprep
+                    dists[i + 80][i] = zleave
                 }
             }
 
@@ -257,7 +260,17 @@
             return [dists, btimes, path]
         }
 
-        const [dists, btimes, path] = floyd(params)
+        params.isk = false
+        params.isg = true
+        const [gdists, gbtimes, gpath] = floyd(params)
+
+        params.isk = true
+        params.isg = false
+        const [kdists, kbtimes, kpath] = floyd(params)
+
+        params.isk = false
+        params.isg = false
+        const [wdists, wbtimes, wpath] = floyd(params)
 
         function calccost(base, perm, time) {
             if (time == 0)
@@ -265,42 +278,48 @@
             return base + perm * Math.floor(time / 60)
         }
 
-        function getpath(a, b) {
-            out = []
-            function getroot(a, b) {
-                if (path[a][b] != 0) {
-                    getroot(a, path[a][b])
-                    out.push(path[a][b])
-                    getroot(path[a][b], b)
+        function gennavi(dists, btimes, path) {
+            return (a, b) => {
+                out = []
+                function getroot(a, b) {
+                    if (path[a][b] != 0) {
+                        getroot(a, path[a][b])
+                        out.push(path[a][b])
+                        getroot(path[a][b], b)
+                    }
                 }
-            }
-            out.push(a)
-            getroot(a, b)
-            out.push(b)
+                out.push(a)
+                getroot(a, b)
+                out.push(b)
 
-            isk = false
-            isg = false
-            for (const p of out) {
-                if (p >= 80) {
-                    isg = true
+                isk = false
+                isg = false
+                for (const p of out) {
+                    if (p >= 80) {
+                        isg = true
+                    }
+                    else if (p >= 40) {
+                        isk = true
+                    }
                 }
-                else if (p >= 40) {
-                    isk = true
+                let cost = 0
+                if (isg) {
+                    cost = calccost(600, 150, btimes[a][b])
                 }
-            }
-            let cost = 0
-            if (isg) {
-                cost = calccost(600, 150, btimes[a][b])
-            }
-            if (isk) {
-                cost = calccost(300, 150, btimes[a][b])
-            }
-            return {
-                path: out,
-                dist: dists[a][b],
-                cost: cost
+                if (isk) {
+                    cost = calccost(300, 150, btimes[a][b])
+                }
+                return {
+                    path: out,
+                    dist: dists[a][b],
+                    cost: cost
+                }
             }
         }
+
+        getgpath = gennavi(gdists, gbtimes, gpath)
+        getkpath = gennavi(kdists, kbtimes, kpath)
+        getwpath = gennavi(wdists, wbtimes, wpath)
     </script>
 </head>
 
@@ -326,6 +345,12 @@
         </div>
 
         <div>
+            <div v-for="path in paths" :style="{ backgroundColor: path.color }" @click=" draw(path)">
+                {{ path.name }} 걸리는 시간 : {{ roundup(path.dist) }} 요금 : {{ roundup(path.cost) }}
+            </div>
+        </div>
+
+        <div>
             <svg width=" 600" height="600" onclick="click(event)">
                 <image x="0" y="0" width="600" height="600" href="/background.png"></image>
 
@@ -345,6 +370,8 @@
                 const spots = ref(spots_raw)
                 const start_spot = ref(-1)
                 const end_spot = ref(-1)
+
+                const paths = ref([])
 
                 const out_lines = ref([])
                 const out_spots = ref([])
@@ -367,7 +394,17 @@
                         return
                     }
 
-                    let { path, dist, cost } = getpath(start, end)
+                    let pl = []
+                    pl.push({ ...getgpath(start, end), name: '지쿠', color: 'green' })
+                    pl.push({ ...getkpath(start, end), name: '카카오', color: 'yellow' })
+                    pl.push({ ...getwpath(start, end), name: '걷기', color: 'grey' })
+                    paths.value = pl
+                }
+
+                roundup = (v) => Math.round(v * 10) / 10
+
+                draw = (p) => {
+                    const path = p.path
                     let out = []
                     let sp = []
                     for (let i = 1; i < path.length; i++) {
@@ -394,11 +431,13 @@
                     spots,
                     start_spot,
                     end_spot,
+                    paths,
                     out_lines,
                     out_spots,
 
                     findpath,
-                    getpath,
+                    roundup,
+                    draw,
                 }
             },
         }).mount('#app')
